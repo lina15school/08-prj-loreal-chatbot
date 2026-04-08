@@ -5,10 +5,8 @@ const chatWindow = document.getElementById("chatWindow");
 const latestQuestion = document.getElementById("latestQuestion");
 const sendBtn = document.getElementById("sendBtn");
 
-const workerUrl = typeof WORKER_URL !== "undefined" ? WORKER_URL : "";
-const openAiApiKey =
-  typeof OPENAI_API_KEY !== "undefined" ? OPENAI_API_KEY : "";
-const openAiApiUrl = "https://api.openai.com/v1/chat/completions";
+const appConfig = window.APP_CONFIG || {};
+const workerUrl = appConfig.WORKER_URL || "";
 
 // Clear scope so the chatbot stays beauty-focused and politely refuses unrelated topics.
 const systemPrompt = {
@@ -90,39 +88,12 @@ async function fetchFromCloudflareWorker() {
   return data.choices?.[0]?.message?.content;
 }
 
-// Optional local fallback for classroom testing. Prefer using the Cloudflare Worker in normal use.
-async function fetchDirectlyFromOpenAI() {
-  const response = await fetch(openAiApiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${openAiApiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages,
-      max_completion_tokens: 300,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI request failed with status ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content;
-}
-
 async function fetchChatResponse() {
-  if (workerUrl && !workerUrl.includes("example.workers.dev")) {
+  if (workerUrl) {
     return fetchFromCloudflareWorker();
   }
 
-  if (openAiApiKey && !openAiApiKey.includes("YOUR_OPENAI_API_KEY")) {
-    return fetchDirectlyFromOpenAI();
-  }
-
-  throw new Error("No valid worker URL or OpenAI API key configured.");
+  throw new Error("No WORKER_URL configured.");
 }
 
 chatWindow.innerHTML = "";
@@ -158,7 +129,7 @@ chatForm.addEventListener("submit", async (event) => {
   } catch (error) {
     removeTypingIndicator();
     addMessageToChat(
-      "I could not connect to the AI service. Check your WORKER_URL and Cloudflare deployment, then try again.",
+      "I could not connect to the AI service. Check your WORKER_URL and Cloudflare Worker deployment, then try again.",
       "assistant",
     );
     console.error(error);
