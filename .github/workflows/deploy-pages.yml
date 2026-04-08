@@ -22,11 +22,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
       - name: Create Pages config
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
         run: |
-          cat > config.js <<'EOF'
+          if [ -z "$WORKER_URL" ]; then
+            echo "WORKER_URL repository secret is missing."
+            exit 1
+          fi
+
+          cat > config.js <<EOF
           window.APP_CONFIG = window.APP_CONFIG || {};
-          window.APP_CONFIG.WORKER_URL = "${{ secrets.WORKER_URL }}";
+          window.APP_CONFIG.WORKER_URL = "${WORKER_URL}";
           EOF
 
       - name: Upload Pages artifact
